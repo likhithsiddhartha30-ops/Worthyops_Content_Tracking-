@@ -1,9 +1,6 @@
-(function () {
-  const session = requireRole('admin', 'client');
+(async function () {
+  const session = await initPage('admin', 'client');
   if (!session) return;
-  initHeader(session);
-  const client = getClient(currentClientId(session));
-  document.getElementById('client-name').textContent = client.name;
 
   const fPlatform = document.getElementById('f-platform');
   const fType = document.getElementById('f-type');

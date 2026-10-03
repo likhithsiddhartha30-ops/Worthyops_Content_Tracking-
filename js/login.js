@@ -1,33 +1,36 @@
-(function () {
-  if (getSession()) { location.href = 'dashboard.html'; return; }
+(async function () {
+  if (await getSession()) { location.href = 'dashboard.html'; return; }
 
   let role = 'client';
   const tabs = document.querySelectorAll('.tabs button');
   const submit = document.getElementById('submit');
   const error = document.getElementById('error');
-  const hint = document.getElementById('hint');
 
   function setRole(r) {
     role = r;
     tabs.forEach(t => t.classList.toggle('active', t.dataset.role === r));
     submit.textContent = 'Sign in as ' + (r === 'admin' ? 'Admin' : 'Client');
-    const demo = r === 'admin' ? ADMINS[0] : DEFAULT_CLIENTS[0];
-    hint.textContent = 'Demo: ' + demo.email + ' / ' + demo.password;
     error.textContent = '';
   }
 
   tabs.forEach(t => t.addEventListener('click', () => setRole(t.dataset.role)));
 
-  document.getElementById('login-form').addEventListener('submit', e => {
+  document.getElementById('login-form').addEventListener('submit', async e => {
     e.preventDefault();
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     if (!email || !password) { error.textContent = 'Enter your email and password.'; return; }
-    if (login(email, password, role)) {
-      location.href = 'dashboard.html';
-    } else {
-      error.textContent = 'Incorrect email or password for ' + role + ' login.';
+
+    submit.disabled = true;
+    submit.textContent = 'Signing in…';
+    const res = await login(email, password, role);
+    if (res.error) {
+      setRole(role);
+      error.textContent = res.error;
+      submit.disabled = false;
+      return;
     }
+    location.href = 'dashboard.html';
   });
 
   setRole('client');

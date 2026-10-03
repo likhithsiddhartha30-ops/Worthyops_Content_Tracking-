@@ -1,9 +1,6 @@
-(function () {
-  const session = requireRole('admin');
+(async function () {
+  const session = await initPage('admin');
   if (!session) return;
-  initHeader(session);
-  const client = getClient(currentClientId(session));
-  document.getElementById('client-name').textContent = client.name;
 
   const fPlatform = document.getElementById('f-platform');
   fPlatform.innerHTML = '<option value="">All platforms</option>' +

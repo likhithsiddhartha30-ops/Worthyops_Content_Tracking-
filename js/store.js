@@ -1,4 +1,4 @@
-// Shared data + auth helpers. Data lives in localStorage (front-end only demo).
+// Shared data + auth helpers, backed by Supabase (see js/config.js and supabase/schema.sql).
 
 const PLATFORMS = {
   LinkedIn: ['Post', 'Carousel', 'Video'],
@@ -16,150 +16,215 @@ function platformTag(p) {
   return '<span class="ptag"><i style="background:' + platformColor(p) + '"></i>' + p + '</span>';
 }
 
-// Demo accounts. Replace with a real backend before going live.
-const ADMINS = [
-  { email: 'admin@demo.test', password: 'admin123', name: 'Admin' }
-];
-
-// Starter clients. Admins can add more from the header ("+" next to the client switcher).
-const DEFAULT_CLIENTS = [
-  { id: 'c1', name: 'Northwind Studio', email: 'client@demo.test', password: 'client123' },
-  { id: 'c2', name: 'Bluepeak Fitness', email: 'bluepeak@demo.test', password: 'client123' },
-  { id: 'c3', name: 'Acme Coaching', email: 'acme@demo.test', password: 'client123' }
-];
-
-const ITEMS_KEY = 'mt_items';
-const SESSION_KEY = 'mt_session';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const CLIENT_KEY = 'mt_client';
-const CLIENTS_KEY = 'mt_clients';
 
-/* ---------- storage ---------- */
+let CLIENTS = []; // clients the signed-in user can see
+let ITEMS = [];   // content for the client being viewed
 
-function readJSON(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch (e) {
-    return fallback;
-  }
+/* ---------- small browser preferences (not data) ---------- */
+
+function readPref(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
 }
 
-function writeJSON(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+function writePref(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) {}
 }
 
-function getItems() {
-  let items = readJSON(ITEMS_KEY, null);
-  if (!items) {
-    items = DEFAULT_CLIENTS.flatMap((c, n) => seedItems(c.id, n));
-    writeJSON(ITEMS_KEY, items);
-  } else if (items.length && items.every(i => !i.clientId)) {
-    // Data from before clients existed: it belongs to the first client.
-    items.forEach(i => { i.clientId = DEFAULT_CLIENTS[0].id; });
-    items = items.concat(DEFAULT_CLIENTS.slice(1).flatMap((c, n) => seedItems(c.id, n + 1)));
-    writeJSON(ITEMS_KEY, items);
-  }
-  return items;
+/* ---------- row mapping (database <-> page) ---------- */
+
+function fromRow(r) {
+  return {
+    id: r.id,
+    clientId: r.client_id,
+    title: r.title,
+    platform: r.platform,
+    type: r.type,
+    date: r.publish_date,
+    status: r.status,
+    link: r.link || '',
+    notes: r.notes || '',
+    reach: r.reach,
+    likes: r.likes,
+    comments: r.comments,
+    shares: r.shares,
+    saves: r.saves
+  };
 }
 
-function saveItems(items) {
-  writeJSON(ITEMS_KEY, items);
-}
-
-function getItem(id) {
-  return getItems().find(i => i.id === id);
-}
-
-function upsertItem(item) {
-  const items = getItems();
-  const idx = items.findIndex(i => i.id === item.id);
-  if (idx >= 0) items[idx] = item; else items.push(item);
-  saveItems(items);
-}
-
-function removeItem(id) {
-  saveItems(getItems().filter(i => i.id !== id));
-}
-
-function newId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-}
-
-/* ---------- clients ---------- */
-
-function getClients() {
-  return DEFAULT_CLIENTS.concat(readJSON(CLIENTS_KEY, []));
-}
-
-function getClient(id) {
-  return getClients().find(c => c.id === id);
-}
-
-// Everyone who can sign in: admins plus one login per client.
-function getUsers() {
-  return ADMINS.map(a => ({ ...a, role: 'admin' })).concat(getClients().map(c => ({
-    email: c.email, password: c.password, role: 'client', name: c.name, clientId: c.id
-  })));
-}
-
-// Creates a client with its own login. Returns { client } or { error }.
-function addClient(name, email, password) {
-  name = name.trim();
-  email = email.trim().toLowerCase();
-  if (!name) return { error: 'Enter a client name.' };
-  if (getClients().some(c => c.name.toLowerCase() === name.toLowerCase())) return { error: 'A client with this name already exists.' };
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'Enter a valid login email.' };
-  if (getUsers().some(u => u.email === email)) return { error: 'This email is already used by another login.' };
-  if (password.length < 6) return { error: 'Password must be at least 6 characters.' };
-
-  const client = { id: 'c' + newId(), name, email, password };
-  writeJSON(CLIENTS_KEY, readJSON(CLIENTS_KEY, []).concat(client));
-  return { client };
-}
-
-// Clients are locked to their own account; admins pick one in the header.
-function currentClientId(session) {
-  if (session.role === 'client') return session.clientId || DEFAULT_CLIENTS[0].id;
-  const saved = readJSON(CLIENT_KEY, null);
-  return getClient(saved) ? saved : DEFAULT_CLIENTS[0].id;
-}
-
-function setCurrentClient(id) {
-  writeJSON(CLIENT_KEY, id);
-}
-
-// Items belonging to the client currently being viewed.
-function clientItems(session) {
-  const cid = currentClientId(session);
-  return getItems().filter(i => i.clientId === cid);
+function toRow(i) {
+  return {
+    client_id: i.clientId,
+    title: i.title,
+    platform: i.platform,
+    type: i.type,
+    publish_date: i.date,
+    status: i.status,
+    link: i.link || null,
+    notes: i.notes || null,
+    reach: i.reach,
+    likes: i.likes,
+    comments: i.comments,
+    shares: i.shares,
+    saves: i.saves
+  };
 }
 
 /* ---------- auth ---------- */
 
-function login(email, password, role) {
-  const user = getUsers().find(u =>
-    u.email === email.trim().toLowerCase() && u.password === password && u.role === role);
-  if (!user) return false;
-  writeJSON(SESSION_KEY, { email: user.email, role: user.role, name: user.name, clientId: user.clientId });
-  return true;
+// Signed-in user + their profile, or null.
+async function getSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return null;
+  const { data: profile } = await sb.from('profiles')
+    .select('email, full_name, role, client_id')
+    .eq('id', session.user.id)
+    .maybeSingle();
+  if (!profile) return null;
+  return {
+    email: profile.email || session.user.email,
+    name: profile.full_name,
+    role: profile.role,
+    clientId: profile.client_id
+  };
 }
 
-function logout() {
-  try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+async function login(email, password, role) {
+  const { error } = await sb.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+  if (error) {
+    return { error: /invalid login credentials/i.test(error.message) ? 'Incorrect email or password.' : error.message };
+  }
+  const s = await getSession();
+  if (!s) {
+    await sb.auth.signOut();
+    return { error: 'This login isn\'t set up yet. Ask your WorthyOps admin.' };
+  }
+  if (s.role !== role) {
+    await sb.auth.signOut();
+    return { error: role === 'admin' ? 'This isn\'t an admin account. Use the Client portal tab.' : 'This is an admin account. Use the Admin tab.' };
+  }
+  return { session: s };
+}
+
+async function logout() {
+  await sb.auth.signOut();
   location.href = 'index.html';
 }
 
-function getSession() {
-  return readJSON(SESSION_KEY, null);
-}
-
-// Call at the top of each protected page. Redirects if not allowed.
-function requireRole(...roles) {
-  const s = getSession();
+// Call at the top of each protected page: checks the login, loads the
+// clients and the current client's content, then fills the header.
+async function initPage(...roles) {
+  const s = await getSession();
   if (!s) { location.href = 'index.html'; return null; }
   if (roles.length && !roles.includes(s.role)) { location.href = 'dashboard.html'; return null; }
+
+  try {
+    await loadClients();
+    await loadItems(s);
+  } catch (e) {
+    showError('Couldn\'t load data from the database: ' + e.message);
+  }
+
+  initHeader(s);
+  document.body.classList.add('ready');
   return s;
 }
+
+/* ---------- clients ---------- */
+
+async function loadClients() {
+  const { data, error } = await sb.from('clients').select('id, name').order('name');
+  if (error) throw error;
+  CLIENTS = data;
+}
+
+function getClients() {
+  return CLIENTS;
+}
+
+function getClient(id) {
+  return CLIENTS.find(c => c.id === id);
+}
+
+// Clients are locked to their own account; admins pick one in the header.
+function currentClientId(session) {
+  if (session.role === 'client') return session.clientId;
+  const saved = readPref(CLIENT_KEY);
+  if (getClient(saved)) return saved;
+  return CLIENTS.length ? CLIENTS[0].id : null;
+}
+
+function setCurrentClient(id) {
+  writePref(CLIENT_KEY, id);
+}
+
+// Creates a client and its login via the create-client Edge Function.
+async function addClient(name, email, password) {
+  name = name.trim();
+  email = email.trim().toLowerCase();
+  if (!name) return { error: 'Enter a client name.' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'Enter a valid login email.' };
+  if (password.length < 6) return { error: 'Password must be at least 6 characters.' };
+
+  const { data, error } = await sb.functions.invoke('create-client', { body: { name, email, password } });
+  if (error) {
+    let msg = error.message;
+    try {
+      const body = await error.context.json();
+      if (body && body.error) msg = body.error;
+    } catch (e) {}
+    if (error.context && error.context.status === 404) msg = 'The create-client function isn\'t deployed in Supabase yet.';
+    return { error: msg };
+  }
+  return { client: data.client };
+}
+
+/* ---------- content ---------- */
+
+async function loadItems(session) {
+  ITEMS = [];
+  const cid = currentClientId(session);
+  if (!cid) return;
+  const { data, error } = await sb.from('content_items')
+    .select('*')
+    .eq('client_id', cid)
+    .order('publish_date', { ascending: false });
+  if (error) throw error;
+  ITEMS = data.map(fromRow);
+}
+
+// Content for the client being viewed (already loaded by initPage).
+function clientItems() {
+  return ITEMS;
+}
+
+function getItem(id) {
+  return ITEMS.find(i => i.id === id);
+}
+
+// Inserts (no id) or updates (with id). Returns { item } or { error }.
+async function saveItem(item) {
+  const row = toRow(item);
+  const query = item.id
+    ? sb.from('content_items').update(row).eq('id', item.id)
+    : sb.from('content_items').insert(row);
+  const { data, error } = await query.select().single();
+  if (error) return { error: error.message };
+  const saved = fromRow(data);
+  const idx = ITEMS.findIndex(i => i.id === saved.id);
+  if (idx >= 0) ITEMS[idx] = saved; else ITEMS.push(saved);
+  return { item: saved };
+}
+
+async function deleteItem(id) {
+  const { error } = await sb.from('content_items').delete().eq('id', id);
+  if (error) return { error: error.message };
+  ITEMS = ITEMS.filter(i => i.id !== id);
+  return {};
+}
+
+/* ---------- header ---------- */
 
 // Fills the header: client switcher (admin) or client name, user label, logout.
 function initHeader(session) {
@@ -170,28 +235,37 @@ function initHeader(session) {
   const slot = document.getElementById('client-slot');
   if (slot) {
     const cid = currentClientId(session);
+    const client = getClient(cid);
+    const initial = client ? escapeHTML(client.name.charAt(0)) : '?';
     if (session.role === 'admin') {
       slot.innerHTML = `<div class="client-bar">
-        <label class="client-switch">
-          <span class="client-dot">${escapeHTML(getClient(cid).name.charAt(0))}</span>
+        ${CLIENTS.length ? `<label class="client-switch">
+          <span class="client-dot">${initial}</span>
           <select id="client-select" aria-label="Client">
-            ${getClients().map(c => `<option value="${c.id}"${c.id === cid ? ' selected' : ''}>${escapeHTML(c.name)}</option>`).join('')}
+            ${CLIENTS.map(c => `<option value="${c.id}"${c.id === cid ? ' selected' : ''}>${escapeHTML(c.name)}</option>`).join('')}
           </select>
-        </label>
+        </label>` : '<span class="client-switch static">No clients yet</span>'}
         <button type="button" class="icon-btn" id="add-client" title="Add client" aria-label="Add client">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       </div>`;
-      document.getElementById('client-select').addEventListener('change', e => {
+      const select = document.getElementById('client-select');
+      if (select) select.addEventListener('change', e => {
         setCurrentClient(e.target.value);
         location.href = location.pathname.split('/').pop() || 'dashboard.html';
       });
       document.getElementById('add-client').addEventListener('click', openAddClient);
-    } else {
+    } else if (client) {
       slot.innerHTML = `<span class="client-switch static">
-        <span class="client-dot">${escapeHTML(getClient(cid).name.charAt(0))}</span>${escapeHTML(getClient(cid).name)}
+        <span class="client-dot">${initial}</span>${escapeHTML(client.name)}
       </span>`;
     }
+  }
+
+  const name = document.getElementById('client-name');
+  if (name) {
+    const client = getClient(currentClientId(session));
+    name.textContent = client ? client.name : (session.role === 'admin' ? 'No client selected' : 'No client linked to this login');
   }
 
   const who = document.getElementById('who');
@@ -200,6 +274,19 @@ function initHeader(session) {
   if (avatar) avatar.textContent = session.role === 'admin' ? 'A' : 'C';
   const out = document.getElementById('logout');
   if (out) out.addEventListener('click', logout);
+}
+
+// Banner at the top of the page for load/save problems.
+function showError(msg) {
+  let el = document.getElementById('app-error');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'app-error';
+    el.className = 'app-error';
+    const main = document.querySelector('main');
+    main.insertBefore(el, main.firstChild);
+  }
+  el.textContent = msg;
 }
 
 // Admin dialog: create a client and its login, then switch to it.
@@ -234,19 +321,24 @@ function openAddClient() {
       <div class="error" id="nc-error"></div>
       <div class="btn-row">
         <button type="button" class="btn ghost" data-close>Cancel</button>
-        <button type="submit" class="btn">Create client</button>
+        <button type="submit" class="btn" id="nc-submit">Create client</button>
       </div>
     </form>`;
     document.body.appendChild(dlg);
 
     dlg.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => dlg.close()));
     dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
-    dlg.querySelector('form').addEventListener('submit', e => {
+    dlg.querySelector('form').addEventListener('submit', async e => {
       e.preventDefault();
-      const res = addClient(
+      const btn = document.getElementById('nc-submit');
+      btn.disabled = true;
+      btn.textContent = 'Creating…';
+      const res = await addClient(
         document.getElementById('nc-name').value,
         document.getElementById('nc-email').value,
         document.getElementById('nc-pass').value);
+      btn.disabled = false;
+      btn.textContent = 'Create client';
       if (res.error) { document.getElementById('nc-error').textContent = res.error; return; }
       setCurrentClient(res.client.id);
       location.href = 'dashboard.html';
@@ -292,63 +384,4 @@ function isoDate(d) {
 function escapeHTML(s) {
   return String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-/* ---------- sample data (first run only) ---------- */
-
-function seedItems(clientId, n0) {
-  let s = 7 + n0 * 101;
-  const rand = () => (s = (s * 9301 + 49297) % 233280) / 233280;
-  const titles = [
-    '5 lessons from scaling a creator business', 'How I plan a week of content',
-    'The hook formula that works', 'Behind the scenes: studio setup',
-    'Why most funnels leak', 'Client results breakdown', 'Morning routine for focus',
-    'Stop posting without a plan', '3 tools I use daily', 'Q&A: your top questions',
-    'From 0 to 10K followers', 'Simple offer framework'
-  ];
-  const scale = [1, 0.55, 1.8][n0 % 3];
-  const baseReach = { Instagram: 9000, Twitter: 6000, LinkedIn: 5000, YouTube: 12000 };
-  const items = [];
-  const today = new Date();
-
-  for (let n = 0; n < 64; n++) {
-    const platform = Object.keys(PLATFORMS)[(n + n0) % 4];
-    const types = PLATFORMS[platform];
-    const type = types[Math.floor(rand() * types.length)];
-    const d = new Date(today);
-    d.setDate(d.getDate() - Math.floor(rand() * 120) - 1);
-    const reach = Math.round(baseReach[platform] * scale * (0.4 + rand() * 1.6));
-    items.push({
-      id: clientId + 's' + n,
-      clientId,
-      title: titles[(n + n0 * 5) % titles.length],
-      platform, type,
-      date: isoDate(d),
-      status: 'published',
-      link: '', notes: '',
-      reach,
-      likes: Math.round(reach * (0.02 + rand() * 0.05)),
-      comments: Math.round(reach * (0.002 + rand() * 0.008)),
-      shares: Math.round(reach * (0.001 + rand() * 0.006)),
-      saves: Math.round(reach * (0.001 + rand() * 0.01))
-    });
-  }
-
-  const upcoming = [
-    ['Carousel: content pillars explained', 'Instagram', 'Carousel', 2, 'scheduled'],
-    ['Thread: my content system', 'Twitter', 'Thread', 3, 'planned'],
-    ['Weekly reel: quick tip', 'Instagram', 'Reel', 5, 'planned'],
-    ['Long-form: full strategy walkthrough', 'YouTube', 'Video', 8, 'planned'],
-    ['Post: lessons from this month', 'LinkedIn', 'Post', 10, 'planned']
-  ];
-  upcoming.forEach(([title, platform, type, days, status], n) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + days + n0);
-    items.push({
-      id: clientId + 'u' + n, clientId, title, platform, type, date: isoDate(d), status,
-      link: '', notes: '', reach: 0, likes: 0, comments: 0, shares: 0, saves: 0
-    });
-  });
-
-  return items;
 }

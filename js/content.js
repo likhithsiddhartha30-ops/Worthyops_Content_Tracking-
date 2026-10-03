@@ -1,9 +1,7 @@
-(function () {
-  const session = requireRole('admin');
+(async function () {
+  const session = await initPage('admin');
   if (!session) return;
-  initHeader(session);
-  const client = getClient(currentClientId(session));
-  document.getElementById('client-name').textContent = client.name;
+  const clientId = currentClientId(session);
 
   const $ = id => document.getElementById(id);
   const form = $('item-form');
@@ -35,7 +33,7 @@
 
   function editItem(id, publish) {
     const i = getItem(id);
-    if (!i || i.clientId !== client.id) return;
+    if (!i || i.clientId !== clientId) return;
     $('id').value = i.id;
     $('title').value = i.title;
     $('platform').value = i.platform;
@@ -83,14 +81,15 @@
     }).join('');
   }
 
-  form.addEventListener('submit', e => {
+  form.addEventListener('submit', async e => {
     e.preventDefault();
+    if (!clientId) { showError('Add a client first (the + button in the header), then add content for them.'); return; }
     const title = $('title').value.trim();
     if (!title || !$('date').value) { $('title').focus(); return; }
     const published = $('status').value === 'published';
     const item = {
-      id: $('id').value || newId(),
-      clientId: client.id,
+      id: $('id').value || null,
+      clientId,
       title,
       platform: $('platform').value,
       type: $('type').value,
@@ -100,18 +99,22 @@
       notes: $('notes').value.trim()
     };
     METRICS.forEach(k => item[k] = published ? Math.max(0, parseInt($(k).value, 10) || 0) : 0);
-    upsertItem(item);
+    $('save').disabled = true;
+    const res = await saveItem(item);
+    $('save').disabled = false;
+    if (res.error) { showError('Couldn\'t save: ' + res.error); return; }
     history.replaceState(null, '', 'content.html');
     resetForm();
     render();
   });
 
-  $('rows').addEventListener('click', e => {
+  $('rows').addEventListener('click', async e => {
     const edit = e.target.dataset.edit;
     const del = e.target.dataset.del;
     if (edit) editItem(edit);
     if (del && confirm('Delete this content? This cannot be undone.')) {
-      removeItem(del);
+      const res = await deleteItem(del);
+      if (res.error) { showError('Couldn\'t delete: ' + res.error); return; }
       if ($('id').value === del) resetForm();
       render();
     }
