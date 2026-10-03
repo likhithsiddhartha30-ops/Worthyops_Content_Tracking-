@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · WorthyOps Content Tracking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a class="brand" href="dashboard.html"><span class="logo">W</span><span class="brand-name">WorthyOps<small>Content Tracking</small></span></a>
+      <nav class="nav">
+        <a href="dashboard.html" class="active">Dashboard</a>
+        <a href="content.html" class="admin-only">Content</a>
+        <a href="planner.html" class="admin-only">Planner</a>
+      </nav>
+      <div class="user">
+        <span id="who"></span>
+        <span class="avatar" id="avatar"></span>
+        <button class="link-btn" id="logout">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page stack">
+    <div class="page-head" style="margin-bottom:6px">
+      <div>
+        <div class="eyebrow" id="today"></div>
+        <h1>Performance overview</h1>
+        <div class="sub">Published content across LinkedIn, Instagram, Twitter and YouTube</div>
+      </div>
+      <div class="filters">
+        <select id="f-platform" aria-label="Platform"></select>
+        <select id="f-type" aria-label="Content type"></select>
+        <select id="f-range" aria-label="Date range">
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="all">All time</option>
+        </select>
+      </div>
+    </div>
+
+    <section class="grid grid-4">
+      <div class="card kpi">
+        <div class="top"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6M9 13h6M9 17h3"/></svg></span>Posts published</div>
+        <div class="value" id="k-posts">0</div>
+        <div class="delta" id="d-posts"></div>
+      </div>
+      <div class="card kpi">
+        <div class="top"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span>Total reach</div>
+        <div class="value" id="k-reach">0</div>
+        <div class="delta" id="d-reach"></div>
+      </div>
+      <div class="card kpi">
+        <div class="top"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>Total engagements</div>
+        <div class="value" id="k-eng">0</div>
+        <div class="delta" id="d-eng"></div>
+      </div>
+      <div class="card kpi">
+        <div class="top"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span>Avg. engagement rate</div>
+        <div class="value" id="k-er">0%</div>
+        <div class="delta" id="d-er"></div>
+      </div>
+    </section>
+
+    <section class="grid grid-main">
+      <div class="card">
+        <div class="card-head">
+          <h2>Reach over time</h2>
+          <span class="sub" id="trend-sub"></span>
+        </div>
+        <div class="chart" id="chart-trend"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Reach by platform</h2>
+        </div>
+        <div class="chart" id="chart-platform"></div>
+      </div>
+    </section>
+
+    <section class="grid grid-2">
+      <div class="card">
+        <div class="card-head">
+          <h2>Engagement rate by content type</h2>
+          <span class="sub">Avg. per post</span>
+        </div>
+        <div class="chart" id="chart-type"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Platforms</h2>
+        </div>
+        <div class="platforms" id="platforms"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Content</h2>
+        <span class="sub" id="count-sub"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" data-key="date">Date</th>
+              <th>Title</th>
+              <th>Platform</th>
+              <th>Type</th>
+              <th class="num sortable" data-key="reach">Reach</th>
+              <th class="num sortable" data-key="likes">Likes</th>
+              <th class="num sortable" data-key="comments">Comments</th>
+              <th class="num sortable" data-key="shares">Shares</th>
+              <th class="num sortable" data-key="saves">Saves</th>
+              <th class="num sortable" data-key="er">Eng. rate</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/store.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

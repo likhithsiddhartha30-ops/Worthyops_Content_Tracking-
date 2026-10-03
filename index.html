@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · WorthyOps Content Tracking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-body">
+  <main class="login">
+    <aside class="login-brand">
+      <div class="brand light"><span class="logo">W</span><span class="brand-name">WorthyOps<small>Content Tracking</small></span></div>
+
+      <div class="login-pitch">
+        <h2>Every post, carousel, reel and thread, measured in one place.</h2>
+        <p>Plan content, log performance and share clear results with your clients.</p>
+      </div>
+
+      <ul class="login-platforms">
+        <li><i style="background:#2a78d6"></i>LinkedIn</li>
+        <li><i style="background:#eb6834"></i>Instagram</li>
+        <li><i style="background:#1baf7a"></i>Twitter</li>
+        <li><i style="background:#eda100"></i>YouTube</li>
+      </ul>
+    </aside>
+
+    <section class="login-form-side">
+      <div class="login-card">
+        <div class="brand mobile-only"><span class="logo">W</span><span class="brand-name">WorthyOps<small>Content Tracking</small></span></div>
+        <h1>Welcome back</h1>
+        <p class="sub">Choose your portal and sign in.</p>
+
+        <div class="tabs" role="tablist">
+          <button type="button" class="active" data-role="client">Client portal</button>
+          <button type="button" data-role="admin">Admin</button>
+        </div>
+
+        <form id="login-form" novalidate>
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" type="email" autocomplete="username" placeholder="you@company.com" required>
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+          </div>
+          <div class="error" id="error"></div>
+          <button class="btn" type="submit" id="submit">Sign in as Client</button>
+        </form>
+
+        <div class="hint" id="hint"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/store.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

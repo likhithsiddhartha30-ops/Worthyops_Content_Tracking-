@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Planner · WorthyOps Content Tracking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a class="brand" href="dashboard.html"><span class="logo">W</span><span class="brand-name">WorthyOps<small>Content Tracking</small></span></a>
+      <nav class="nav">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="content.html">Content</a>
+        <a href="planner.html" class="active">Planner</a>
+      </nav>
+      <div class="user">
+        <span id="who"></span>
+        <span class="avatar" id="avatar"></span>
+        <button class="link-btn" id="logout">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="page-head">
+      <div>
+        <h1>Planner</h1>
+        <div class="sub">Upcoming planned and scheduled content</div>
+      </div>
+      <div class="filters">
+        <select id="f-platform" aria-label="Platform"></select>
+        <a class="btn" href="content.html?new=planned">+ Plan content</a>
+      </div>
+    </div>
+
+    <section class="card" id="plan"></section>
+  </main>
+
+  <script src="js/store.js"></script>
+  <script src="js/planner.js"></script>
+</body>
+</html>
