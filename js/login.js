@@ -11,7 +11,7 @@
     role = r;
     tabs.forEach(t => t.classList.toggle('active', t.dataset.role === r));
     submit.textContent = 'Sign in as ' + (r === 'admin' ? 'Admin' : 'Client');
-    const demo = USERS.find(u => u.role === r);
+    const demo = r === 'admin' ? ADMINS[0] : DEFAULT_CLIENTS[0];
     hint.textContent = 'Demo: ' + demo.email + ' / ' + demo.password;
     error.textContent = '';
   }

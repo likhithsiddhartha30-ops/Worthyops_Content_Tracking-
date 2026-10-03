@@ -21,6 +21,6 @@ Demo logins:
   - Bluepeak Fitness: `bluepeak@demo.test`
   - Acme Coaching: `acme@demo.test`
 
-Clients and logins are defined in `js/store.js` (`CLIENTS` and `USERS`).
+Admins can add new clients (with their own login) using the **+** button next to the client switcher. The starter clients and admin login live in `js/store.js` (`DEFAULT_CLIENTS` and `ADMINS`).
 
 > Note: login and data storage are front-end only (browser localStorage). Add a real backend before using it with real clients.
