@@ -2,6 +2,8 @@
   const session = requireRole('admin');
   if (!session) return;
   initHeader(session);
+  const client = getClient(currentClientId(session));
+  document.getElementById('client-name').textContent = client.name;
 
   const $ = id => document.getElementById(id);
   const form = $('item-form');
@@ -33,7 +35,7 @@
 
   function editItem(id, publish) {
     const i = getItem(id);
-    if (!i) return;
+    if (!i || i.clientId !== client.id) return;
     $('id').value = i.id;
     $('title').value = i.title;
     $('platform').value = i.platform;
@@ -54,7 +56,7 @@
   function render() {
     const p = $('f-platform').value;
     const s = $('f-status').value;
-    const items = getItems()
+    const items = clientItems(session)
       .filter(i => (!p || i.platform === p) && (!s || i.status === s))
       .sort((a, b) => b.date.localeCompare(a.date));
 
@@ -88,6 +90,7 @@
     const published = $('status').value === 'published';
     const item = {
       id: $('id').value || newId(),
+      clientId: client.id,
       title,
       platform: $('platform').value,
       type: $('type').value,

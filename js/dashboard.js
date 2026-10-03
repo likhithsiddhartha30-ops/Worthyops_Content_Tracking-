@@ -2,6 +2,8 @@
   const session = requireRole('admin', 'client');
   if (!session) return;
   initHeader(session);
+  const client = getClient(currentClientId(session));
+  document.getElementById('client-name').textContent = client.name;
 
   const fPlatform = document.getElementById('f-platform');
   const fType = document.getElementById('f-type');
@@ -31,7 +33,7 @@
   function matching(from, to) {
     const p = fPlatform.value;
     const t = fType.value;
-    return getItems().filter(i =>
+    return clientItems(session).filter(i =>
       i.status === 'published' &&
       (!p || i.platform === p) &&
       (!t || i.type === t) &&

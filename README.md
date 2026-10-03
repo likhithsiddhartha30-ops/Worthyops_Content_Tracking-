@@ -15,7 +15,12 @@ Open `index.html` in a browser. No build step is needed.
 
 Demo logins:
 
-- Client: `client@demo.test` / `client123`
-- Admin: `admin@demo.test` / `admin123`
+- Admin: `admin@demo.test` / `admin123` (pick any client from the switcher in the header)
+- Clients (each sees only their own dashboard), password `client123`:
+  - Northwind Studio: `client@demo.test`
+  - Bluepeak Fitness: `bluepeak@demo.test`
+  - Acme Coaching: `acme@demo.test`
+
+Clients and logins are defined in `js/store.js` (`CLIENTS` and `USERS`).
 
 > Note: login and data storage are front-end only (browser localStorage). Add a real backend before using it with real clients.

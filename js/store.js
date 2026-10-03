@@ -16,14 +16,24 @@ function platformTag(p) {
   return '<span class="ptag"><i style="background:' + platformColor(p) + '"></i>' + p + '</span>';
 }
 
+// Clients the admin manages. Add a client here and give it a login below.
+const CLIENTS = [
+  { id: 'c1', name: 'Northwind Studio' },
+  { id: 'c2', name: 'Bluepeak Fitness' },
+  { id: 'c3', name: 'Acme Coaching' }
+];
+
 // Demo accounts. Replace with a real backend before going live.
 const USERS = [
   { email: 'admin@demo.test', password: 'admin123', role: 'admin', name: 'Admin' },
-  { email: 'client@demo.test', password: 'client123', role: 'client', name: 'Client' }
+  { email: 'client@demo.test', password: 'client123', role: 'client', name: 'Northwind Studio', clientId: 'c1' },
+  { email: 'bluepeak@demo.test', password: 'client123', role: 'client', name: 'Bluepeak Fitness', clientId: 'c2' },
+  { email: 'acme@demo.test', password: 'client123', role: 'client', name: 'Acme Coaching', clientId: 'c3' }
 ];
 
 const ITEMS_KEY = 'mt_items';
 const SESSION_KEY = 'mt_session';
+const CLIENT_KEY = 'mt_client';
 
 /* ---------- storage ---------- */
 
@@ -43,7 +53,12 @@ function writeJSON(key, value) {
 function getItems() {
   let items = readJSON(ITEMS_KEY, null);
   if (!items) {
-    items = seedItems();
+    items = CLIENTS.flatMap((c, n) => seedItems(c.id, n));
+    writeJSON(ITEMS_KEY, items);
+  } else if (items.length && items.every(i => !i.clientId)) {
+    // Data from before clients existed: it belongs to the first client.
+    items.forEach(i => { i.clientId = CLIENTS[0].id; });
+    items = items.concat(CLIENTS.slice(1).flatMap((c, n) => seedItems(c.id, n + 1)));
     writeJSON(ITEMS_KEY, items);
   }
   return items;
@@ -72,13 +87,36 @@ function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+/* ---------- clients ---------- */
+
+function getClient(id) {
+  return CLIENTS.find(c => c.id === id);
+}
+
+// Clients are locked to their own account; admins pick one in the header.
+function currentClientId(session) {
+  if (session.role === 'client') return session.clientId || CLIENTS[0].id;
+  const saved = readJSON(CLIENT_KEY, null);
+  return getClient(saved) ? saved : CLIENTS[0].id;
+}
+
+function setCurrentClient(id) {
+  writeJSON(CLIENT_KEY, id);
+}
+
+// Items belonging to the client currently being viewed.
+function clientItems(session) {
+  const cid = currentClientId(session);
+  return getItems().filter(i => i.clientId === cid);
+}
+
 /* ---------- auth ---------- */
 
 function login(email, password, role) {
   const user = USERS.find(u =>
     u.email === email.trim().toLowerCase() && u.password === password && u.role === role);
   if (!user) return false;
-  writeJSON(SESSION_KEY, { email: user.email, role: user.role, name: user.name });
+  writeJSON(SESSION_KEY, { email: user.email, role: user.role, name: user.name, clientId: user.clientId });
   return true;
 }
 
@@ -99,11 +137,33 @@ function requireRole(...roles) {
   return s;
 }
 
-// Fills the header: user label, logout button, hides admin links for clients.
+// Fills the header: client switcher (admin) or client name, user label, logout.
 function initHeader(session) {
   document.querySelectorAll('.admin-only').forEach(el => {
     if (session.role !== 'admin') el.remove();
   });
+
+  const slot = document.getElementById('client-slot');
+  if (slot) {
+    const cid = currentClientId(session);
+    if (session.role === 'admin') {
+      slot.innerHTML = `<label class="client-switch">
+        <span class="client-dot">${escapeHTML(getClient(cid).name.charAt(0))}</span>
+        <select id="client-select" aria-label="Client">
+          ${CLIENTS.map(c => `<option value="${c.id}"${c.id === cid ? ' selected' : ''}>${escapeHTML(c.name)}</option>`).join('')}
+        </select>
+      </label>`;
+      document.getElementById('client-select').addEventListener('change', e => {
+        setCurrentClient(e.target.value);
+        location.href = location.pathname.split('/').pop() || 'dashboard.html';
+      });
+    } else {
+      slot.innerHTML = `<span class="client-switch static">
+        <span class="client-dot">${escapeHTML(getClient(cid).name.charAt(0))}</span>${escapeHTML(getClient(cid).name)}
+      </span>`;
+    }
+  }
+
   const who = document.getElementById('who');
   if (who) who.textContent = session.email;
   const avatar = document.getElementById('avatar');
@@ -150,8 +210,8 @@ function escapeHTML(s) {
 
 /* ---------- sample data (first run only) ---------- */
 
-function seedItems() {
-  let s = 7;
+function seedItems(clientId, n0) {
+  let s = 7 + n0 * 101;
   const rand = () => (s = (s * 9301 + 49297) % 233280) / 233280;
   const titles = [
     '5 lessons from scaling a creator business', 'How I plan a week of content',
@@ -160,20 +220,22 @@ function seedItems() {
     'Stop posting without a plan', '3 tools I use daily', 'Q&A: your top questions',
     'From 0 to 10K followers', 'Simple offer framework'
   ];
+  const scale = [1, 0.55, 1.8][n0 % 3];
   const baseReach = { Instagram: 9000, Twitter: 6000, LinkedIn: 5000, YouTube: 12000 };
   const items = [];
   const today = new Date();
 
   for (let n = 0; n < 64; n++) {
-    const platform = Object.keys(PLATFORMS)[n % 4];
+    const platform = Object.keys(PLATFORMS)[(n + n0) % 4];
     const types = PLATFORMS[platform];
     const type = types[Math.floor(rand() * types.length)];
     const d = new Date(today);
     d.setDate(d.getDate() - Math.floor(rand() * 120) - 1);
-    const reach = Math.round(baseReach[platform] * (0.4 + rand() * 1.6));
+    const reach = Math.round(baseReach[platform] * scale * (0.4 + rand() * 1.6));
     items.push({
-      id: 's' + n,
-      title: titles[n % titles.length],
+      id: clientId + 's' + n,
+      clientId,
+      title: titles[(n + n0 * 5) % titles.length],
       platform, type,
       date: isoDate(d),
       status: 'published',
@@ -195,9 +257,9 @@ function seedItems() {
   ];
   upcoming.forEach(([title, platform, type, days, status], n) => {
     const d = new Date(today);
-    d.setDate(d.getDate() + days);
+    d.setDate(d.getDate() + days + n0);
     items.push({
-      id: 'u' + n, title, platform, type, date: isoDate(d), status,
+      id: clientId + 'u' + n, clientId, title, platform, type, date: isoDate(d), status,
       link: '', notes: '', reach: 0, likes: 0, comments: 0, shares: 0, saves: 0
     });
   });
