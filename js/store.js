@@ -167,14 +167,16 @@ async function addClient(name, email, password) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'Enter a valid login email.' };
   if (password.length < 6) return { error: 'Password must be at least 6 characters.' };
 
-  const { data, error } = await sb.functions.invoke('create-client', { body: { name, email, password } });
+  const { data, error } = await sb.functions.invoke(CREATE_CLIENT_FUNCTION, { body: { name, email, password } });
   if (error) {
     let msg = error.message;
     try {
       const body = await error.context.json();
       if (body && body.error) msg = body.error;
     } catch (e) {}
-    if (error.context && error.context.status === 404) msg = 'The create-client function isn\'t deployed in Supabase yet.';
+    if ((error.context && error.context.status === 404) || error.name === 'FunctionsFetchError') {
+      msg = 'Couldn\'t reach the Edge Function "' + CREATE_CLIENT_FUNCTION + '". Check its URL slug in Supabase matches js/config.js.';
+    }
     return { error: msg };
   }
   return { client: data.client };
