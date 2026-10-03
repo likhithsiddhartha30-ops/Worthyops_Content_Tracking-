@@ -7,6 +7,7 @@
   const fType = document.getElementById('f-type');
   const fRange = document.getElementById('f-range');
   const DAY = 86400000;
+  let range = '30';
   let sortKey = 'date';
   let sortAsc = false;
 
@@ -93,31 +94,39 @@
 
     const map = new Map();
     for (let d = bucketStart(start); d <= today; d = step(d)) {
-      map.set(isoDate(d), { date: new Date(d), value: 0, posts: 0 });
+      map.set(isoDate(d), { date: new Date(d), value: 0, eng: 0, posts: 0 });
     }
     items.forEach(i => {
       const b = map.get(isoDate(bucketStart(new Date(i.date + 'T00:00:00'))));
-      if (b) { b.value += +i.reach || 0; b.posts++; }
+      if (b) { b.value += +i.reach || 0; b.eng += engagements(i); b.posts++; }
     });
 
     const short = { month: 'short', day: 'numeric' };
     document.getElementById('trend-sub').textContent = 'Per ' + unit;
     return [...map.values()].map(b => {
       const posts = b.posts + (b.posts === 1 ? ' post' : ' posts');
+      const base = { value: b.value, eng: b.eng, posts: b.posts };
       if (unit === 'month') {
         return {
-          value: b.value,
+          ...base,
           label: b.date.toLocaleDateString(undefined, { month: 'short' }),
           tip: b.date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) + ' · ' + posts
         };
       }
       const label = b.date.toLocaleDateString(undefined, short);
       return {
-        value: b.value,
+        ...base,
         label,
         tip: (unit === 'week' ? 'Week of ' + label : b.date.toLocaleDateString(undefined, { weekday: 'short', ...short })) + ' · ' + posts
       };
     });
+  }
+
+  function renderSparks(points) {
+    sparkline(document.getElementById('s-reach'), points.map(p => p.value), 'var(--accent-2)');
+    sparkline(document.getElementById('s-eng'), points.map(p => p.eng));
+    sparkline(document.getElementById('s-er'), points.map(p => (p.value ? p.eng / p.value : 0)));
+    sparkline(document.getElementById('s-posts'), points.map(p => p.posts));
   }
 
   /* ---------- render ---------- */
@@ -126,7 +135,10 @@
     const p = fPlatform.value;
     const seriesColor = p ? platformColor(p) : 'var(--accent)';
 
-    lineChart(document.getElementById('chart-trend'), trendPoints(items, range), {
+    const points = trendPoints(items, range);
+    renderSparks(points);
+
+    lineChart(document.getElementById('chart-trend'), points, {
       color: seriesColor,
       label: 'Reach over time',
       format: v => fmtNum(v) + ' reach'
@@ -160,7 +172,6 @@
   }
 
   function render() {
-    const range = fRange.value;
     const today = isoDate(new Date());
     const from = range === 'all' ? null : daysAgo(+range - 1);
     const items = matching(from, today);
@@ -227,7 +238,11 @@
 
   fPlatform.addEventListener('change', () => { fillTypes(); render(); });
   fType.addEventListener('change', render);
-  fRange.addEventListener('change', render);
+  fRange.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    range = b.dataset.range;
+    fRange.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+    render();
+  }));
 
   let resizeTimer;
   window.addEventListener('resize', () => {

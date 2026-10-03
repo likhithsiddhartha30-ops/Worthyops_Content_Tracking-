@@ -16,6 +16,41 @@ function niceMax(v) {
   return step * pow;
 }
 
+// Vertical fade (color -> transparent) used under lines. Returns a <defs>.
+let gradientSeq = 0;
+function areaGradient(svg, color, opacity) {
+  const id = 'grad' + (++gradientSeq);
+  const defs = svgEl('defs', {});
+  const g = svgEl('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 });
+  const s1 = svgEl('stop', { offset: '0%', style: `stop-color:${color};stop-opacity:${opacity}` });
+  const s2 = svgEl('stop', { offset: '100%', style: `stop-color:${color};stop-opacity:0` });
+  g.appendChild(s1);
+  g.appendChild(s2);
+  defs.appendChild(g);
+  return defs;
+}
+
+/*
+ * Tiny trend line for KPI tiles. values: number[]
+ */
+function sparkline(container, values, color = 'var(--accent)') {
+  container.innerHTML = '';
+  if (values.length < 2) return;
+  const w = 200, h = 44, pad = 4;
+  const max = Math.max(...values) || 1;
+  const min = Math.min(...values);
+  const range = max - min || 1;
+  const x = i => (i / (values.length - 1)) * w;
+  const y = v => pad + (h - pad * 2) * (1 - (v - min) / range);
+  const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, preserveAspectRatio: 'none', 'aria-hidden': 'true' });
+  const line = values.map((v, i) => (i ? 'L' : 'M') + x(i) + ' ' + y(v)).join(' ');
+  const defs = areaGradient(svg, color, 0.35);
+  svg.appendChild(defs);
+  svg.appendChild(svgEl('path', { d: line + ` L${w} ${h} L0 ${h} Z`, fill: `url(#${defs.firstChild.id})` }));
+  svg.appendChild(svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke', 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+  container.appendChild(svg);
+}
+
 function makeTooltip(container) {
   let tip = container.querySelector('.tooltip');
   if (!tip) {
@@ -86,7 +121,9 @@ function lineChart(container, points, opts = {}) {
   // area + line
   const linePath = points.map((p, i) => (i ? 'L' : 'M') + x(i) + ' ' + y(p.value)).join(' ');
   const areaPath = linePath + ` L${x(points.length - 1)} ${y(0)} L${x(0)} ${y(0)} Z`;
-  svg.appendChild(svgEl('path', { d: areaPath, fill: color, 'fill-opacity': 0.1, stroke: 'none' }));
+  const defs = areaGradient(svg, color, 0.28);
+  svg.appendChild(defs);
+  svg.appendChild(svgEl('path', { d: areaPath, fill: `url(#${defs.firstChild.id})`, stroke: 'none' }));
   svg.appendChild(svgEl('path', { d: linePath, fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
 
   // end dot + end label

@@ -6,10 +6,10 @@
   <title>Dashboard · WorthyOps Content Tracking</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="app">
   <header class="header">
     <div class="header-inner">
       <a class="brand" href="dashboard.html"><span class="logo">W</span><span class="brand-name">WorthyOps<small>Content Tracking</small></span></a>
@@ -27,7 +27,7 @@
   </header>
 
   <main class="page stack">
-    <div class="page-head" style="margin-bottom:6px">
+    <div class="page-head" style="margin-bottom:8px">
       <div>
         <div class="eyebrow" id="today"></div>
         <h1>Performance overview</h1>
@@ -36,35 +36,39 @@
       <div class="filters">
         <select id="f-platform" aria-label="Platform"></select>
         <select id="f-type" aria-label="Content type"></select>
-        <select id="f-range" aria-label="Date range">
-          <option value="7">Last 7 days</option>
-          <option value="30" selected>Last 30 days</option>
-          <option value="90">Last 90 days</option>
-          <option value="all">All time</option>
-        </select>
+        <div class="segmented" id="f-range" role="group" aria-label="Date range">
+          <button type="button" data-range="7">7D</button>
+          <button type="button" data-range="30" class="active">30D</button>
+          <button type="button" data-range="90">90D</button>
+          <button type="button" data-range="all">All</button>
+        </div>
       </div>
     </div>
 
     <section class="grid grid-4">
-      <div class="card kpi">
-        <div class="top"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6M9 13h6M9 17h3"/></svg></span>Posts published</div>
-        <div class="value" id="k-posts">0</div>
-        <div class="delta" id="d-posts"></div>
-      </div>
-      <div class="card kpi">
-        <div class="top"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span>Total reach</div>
+      <div class="card kpi hero">
+        <div class="top">Total reach<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span></div>
         <div class="value" id="k-reach">0</div>
         <div class="delta" id="d-reach"></div>
+        <div class="spark" id="s-reach"></div>
       </div>
       <div class="card kpi">
-        <div class="top"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></span>Total engagements</div>
+        <div class="top">Total engagements<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></span></div>
         <div class="value" id="k-eng">0</div>
         <div class="delta" id="d-eng"></div>
+        <div class="spark" id="s-eng"></div>
       </div>
       <div class="card kpi">
-        <div class="top"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span>Avg. engagement rate</div>
+        <div class="top">Avg. engagement rate<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span></div>
         <div class="value" id="k-er">0%</div>
         <div class="delta" id="d-er"></div>
+        <div class="spark" id="s-er"></div>
+      </div>
+      <div class="card kpi">
+        <div class="top">Posts published<span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6M9 13h6M9 17h3"/></svg></span></div>
+        <div class="value" id="k-posts">0</div>
+        <div class="delta" id="d-posts"></div>
+        <div class="spark" id="s-posts"></div>
       </div>
     </section>
 
